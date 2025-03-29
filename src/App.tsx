@@ -1,7 +1,9 @@
+import Calendar from './component/Calendar'
+
 function App() {
   return (
     <>
-      Start
+      <Calendar />
     </>
   )
 }
