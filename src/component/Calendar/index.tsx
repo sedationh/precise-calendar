@@ -1,10 +1,12 @@
-/* eslint-disable no-alert */
-import type { EventClickArg, EventDropArg } from '@fullcalendar/core'
+import type { EventChangeArg, EventClickArg, EventDropArg } from '@fullcalendar/core'
+import type { DateClickArg } from '@fullcalendar/interaction'
 import bootstrap5Plugin from '@fullcalendar/bootstrap5'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import FullCalendar from '@fullcalendar/react'
 import { useLocalStorageState } from 'ahooks'
+import { useState } from 'react'
+import EventDialog from './EventDialog'
 import 'bootstrap/dist/css/bootstrap.css'
 import 'bootstrap-icons/font/bootstrap-icons.css'
 
@@ -50,6 +52,11 @@ export default function Calendar() {
     },
   )
 
+  // 添加状态用于控制对话框
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [selectedDate, setSelectedDate] = useState(new Date())
+  const [selectedEvent, setSelectedEvent] = useState<CustomEventSourceInput | null>(null)
+
   const handleEventDrop = (info: EventDropArg) => {
     // 获取被拖拽的事件ID
     const eventId = info.event.id
@@ -71,68 +78,117 @@ export default function Calendar() {
     setEvents(updatedEvents)
   }
 
-  // 添加日期点击处理函数
-  const handleDateClick = (arg: any) => {
-    const title = prompt('请输入事件标题:')
-    if (title) {
-      const isMultiDay = confirm('是否是多天事件？')
+  // 添加事件调整大小的处理函数
+  const handleEventResize = (info: EventChangeArg) => {
+    // 获取被调整的事件ID
+    const eventId = info.event.id
 
-      const start = new Date(arg.date)
-      let end
-
-      if (isMultiDay) {
-        const daysInput = prompt('请输入事件持续天数:', '2')
-        const days = Number.parseInt(daysInput || '2', 10)
-        if (!Number.isNaN(days) && days > 0) {
-          const endDate = new Date(start)
-          endDate.setDate(endDate.getDate() + days)
-          end = endDate
+    // 创建更新后的事件数组
+    const updatedEvents = events?.map((event) => {
+      if (event.id === eventId) {
+        // 返回更新后的事件，保持原始数据不变，只更新结束时间
+        return {
+          ...event,
+          start: info.event.start!,
+          end: info.event.end!,
         }
       }
+      return event
+    })
 
-      const newEvent = {
-        id: Date.now().toString(),
-        title,
-        start,
-        end,
-        allDay: true, // 所有事件都是全天事件
-      }
-
-      // 添加新事件到事件列表中
-      setEvents([...(events || []), newEvent])
-    }
+    // 更新状态
+    setEvents(updatedEvents)
   }
 
-  // 添加事件点击处理函数
-  const handleEventClick = (clickInfo: EventClickArg) => {
-    if (confirm(`是否要删除事件 "${clickInfo.event.title}"?`)) {
-      // 获取要删除的事件ID
-      const eventId = clickInfo.event.id
-
-      // 过滤掉要删除的事件
-      const updatedEvents = events?.filter(event => event.id !== eventId) || []
-
-      // 更新事件列表
+  // 添加保存事件的处理函数
+  const handleSaveEvent = (eventData: {
+    title: string
+    start: Date
+    end?: Date
+    allDay: boolean
+  }) => {
+    if (selectedEvent) {
+      // 更新现有事件
+      const updatedEvents = events?.map(event =>
+        event.id === selectedEvent.id
+          ? { ...event, ...eventData }
+          : event,
+      ) || []
       setEvents(updatedEvents)
+    }
+    else {
+      // 添加新事件
+      const newEvent = {
+        id: Date.now().toString(),
+        ...eventData,
+      }
+      setEvents([...(events || []), newEvent])
+    }
+
+    setIsDialogOpen(false)
+  }
+
+  const handleDateClick = (arg: DateClickArg) => {
+    setSelectedDate(new Date(arg.date))
+    setSelectedEvent(null) // 清空选中的事件
+    setIsDialogOpen(true)
+  }
+
+  // 修改事件点击处理函数
+  const handleEventClick = (clickInfo: EventClickArg) => {
+    // 获取点击的事件
+    const eventId = clickInfo.event.id
+    const event = events?.find(e => e.id === eventId)
+
+    if (!event) {
+      return
+    }
+
+    setSelectedEvent(event)
+    setSelectedDate(event.start)
+    setIsDialogOpen(true)
+  }
+
+  // 添加删除事件的处理函数
+  const handleDeleteEvent = () => {
+    if (selectedEvent) {
+      // 过滤掉要删除的事件
+      const updatedEvents = events?.filter(event => event.id !== selectedEvent.id) || []
+      setEvents(updatedEvents)
+      setIsDialogOpen(false)
     }
   }
 
   return (
-    <FullCalendar
-      plugins={[dayGridPlugin, bootstrap5Plugin, interactionPlugin]}
-      buttonText={{
-        today: 'Today',
-      }}
-      themeSystem="bootstrap5"
-      editable={true}
-      droppable={true}
-      events={events}
-      eventDrop={handleEventDrop}
-      dateClick={handleDateClick}
-      eventClick={handleEventClick}
-      // 当日期有太多事件时，显示"更多"链接
-      // dayMaxEvents={true}
-      firstDay={1}
-    />
+    <>
+      <FullCalendar
+        plugins={[dayGridPlugin, bootstrap5Plugin, interactionPlugin]}
+        buttonText={{
+          today: 'Today',
+        }}
+        themeSystem="bootstrap5"
+        editable={true}
+        eventResizableFromStart={true}
+        droppable={true}
+        events={events}
+        eventDrop={handleEventDrop}
+        eventResize={handleEventResize}
+        dateClick={handleDateClick}
+        eventClick={handleEventClick}
+        // 当日期有太多事件时，显示"更多"链接
+        // dayMaxEvents={true}
+        firstDay={1}
+      />
+
+      {/* 修改事件对话框 */}
+      <EventDialog
+        isOpen={isDialogOpen}
+        onClose={() => setIsDialogOpen(false)}
+        onSave={handleSaveEvent}
+        onDelete={handleDeleteEvent}
+        selectedDate={selectedDate}
+        selectedEvent={selectedEvent}
+      />
+    </>
   )
 }
