@@ -23,7 +23,6 @@ import {
 } from '@/components/ui/popover'
 import { Textarea } from '@/components/ui/textarea'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import { format } from 'date-fns'
 import { CalendarIcon, Trash2 } from 'lucide-react'
 import React, { useEffect } from 'react'
@@ -31,11 +30,15 @@ import { useForm } from 'react-hook-form'
 import * as z from 'zod'
 
 // 添加事件接口
+interface TimeSlot {
+  start: Date
+  end?: Date
+}
+
 interface CustomEventSourceInput {
   id: string
   title: string
-  start: Date
-  end?: Date
+  timeSlots: TimeSlot[]
   allDay: boolean
   description?: string
 }
@@ -43,7 +46,7 @@ interface CustomEventSourceInput {
 interface EventDialogProps {
   isOpen: boolean
   onClose: () => void
-  onSave: (eventData: { title: string, start: Date, end?: Date, allDay: boolean, description?: string }) => void
+  onSave: (eventData: { title: string, timeSlots: TimeSlot[], allDay: boolean, description?: string }) => void
   onDelete: () => void
   selectedDate: Date
   selectedEvent: CustomEventSourceInput | null
@@ -52,8 +55,10 @@ interface EventDialogProps {
 // 创建表单验证模式
 const formSchema = z.object({
   title: z.string().min(1, { message: '标题不能为空' }),
-  startDate: z.date(),
-  endDate: z.date(),
+  timeSlots: z.array(z.object({
+    start: z.date(),
+    end: z.date().optional(),
+  })),
   description: z.string().optional(),
 })
 
@@ -72,8 +77,7 @@ const EventDialog: React.FC<EventDialogProps> = ({
     resolver: zodResolver(formSchema),
     defaultValues: {
       title: 'Happy',
-      startDate: selectedDate,
-      endDate: selectedDate,
+      timeSlots: [{ start: selectedDate, end: selectedDate }],
       description: '',
     },
   })
@@ -84,16 +88,14 @@ const EventDialog: React.FC<EventDialogProps> = ({
       if (selectedEvent) {
         form.reset({
           title: selectedEvent.title,
-          startDate: selectedEvent.start,
-          endDate: selectedEvent.end || selectedEvent.start,
+          timeSlots: selectedEvent.timeSlots,
           description: selectedEvent.description || '',
         })
       }
       else {
         form.reset({
           title: 'Happy',
-          startDate: selectedDate,
-          endDate: selectedDate,
+          timeSlots: [{ start: selectedDate, end: selectedDate }],
           description: '',
         })
       }
@@ -113,11 +115,31 @@ const EventDialog: React.FC<EventDialogProps> = ({
   const onSubmit = (data: FormValues) => {
     onSave({
       title: data.title,
-      start: data.startDate,
-      end: !isSameDay(data.startDate, data.endDate) ? data.endDate : undefined,
+      timeSlots: data.timeSlots.map(slot => ({
+        start: slot.start,
+        end: !isSameDay(slot.start, slot.end || slot.start) ? slot.end : undefined,
+      })),
       allDay: true,
       description: data.description,
     })
+  }
+
+  // 添加新的时间段
+  const addTimeSlot = () => {
+    const currentTimeSlots = form.getValues('timeSlots')
+    form.setValue('timeSlots', [
+      ...currentTimeSlots,
+      { start: selectedDate, end: selectedDate },
+    ])
+  }
+
+  // 删除时间段
+  const removeTimeSlot = (index: number) => {
+    const currentTimeSlots = form.getValues('timeSlots')
+    form.setValue(
+      'timeSlots',
+      currentTimeSlots.filter((_, i) => i !== index),
+    )
   }
 
   return (
@@ -126,11 +148,9 @@ const EventDialog: React.FC<EventDialogProps> = ({
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <DialogHeader>
-              <VisuallyHidden>
-                <DialogTitle>
-                  {selectedEvent ? '编辑日程' : '新建日程'}
-                </DialogTitle>
-              </VisuallyHidden>
+              <DialogTitle>
+                {selectedEvent ? '编辑日程' : '新建日程'}
+              </DialogTitle>
               <FormField
                 control={form.control}
                 name="title"
@@ -149,79 +169,96 @@ const EventDialog: React.FC<EventDialogProps> = ({
             </DialogHeader>
 
             <div className="space-y-4 py-4">
-              <div className="flex items-center gap-2">
-                <CalendarIcon className="h-5 w-5 text-muted-foreground" />
-                <div className="grid grid-cols-2 gap-2">
-                  <FormField
-                    control={form.control}
-                    name="startDate"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                className="pl-3 text-left font-normal"
-                              >
-                                {field.value
-                                  ? (
-                                      format(field.value, 'yyyy-MM-dd')
-                                    )
-                                  : (
-                                      <span>选择开始日期</span>
-                                    )}
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={field.value}
-                              onSelect={field.onChange}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="endDate"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                className="pl-3 text-left font-normal"
-                              >
-                                {field.value
-                                  ? (
-                                      format(field.value, 'yyyy-MM-dd')
-                                    )
-                                  : (
-                                      <span>选择结束日期</span>
-                                    )}
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={field.value}
-                              onSelect={field.onChange}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </FormItem>
-                    )}
-                  />
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <CalendarIcon className="h-5 w-5 text-muted-foreground" />
+                  <span className="text-sm font-medium">时间段</span>
                 </div>
+                {form.watch('timeSlots').map((_, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <div className="grid grid-cols-2 gap-2 flex-1">
+                      <FormField
+                        control={form.control}
+                        name={`timeSlots.${index}.start`}
+                        render={({ field }) => (
+                          <FormItem className="flex flex-col">
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <FormControl>
+                                  <Button
+                                    variant="outline"
+                                    className="pl-3 text-left font-normal"
+                                  >
+                                    {field.value
+                                      ? format(field.value, 'yyyy-MM-dd')
+                                      : <span>选择开始日期</span>}
+                                  </Button>
+                                </FormControl>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                  mode="single"
+                                  selected={field.value}
+                                  onSelect={field.onChange}
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name={`timeSlots.${index}.end`}
+                        render={({ field }) => (
+                          <FormItem className="flex flex-col">
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <FormControl>
+                                  <Button
+                                    variant="outline"
+                                    className="pl-3 text-left font-normal"
+                                  >
+                                    {field.value
+                                      ? format(field.value, 'yyyy-MM-dd')
+                                      : <span>选择结束日期</span>}
+                                  </Button>
+                                </FormControl>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                  mode="single"
+                                  selected={field.value}
+                                  onSelect={field.onChange}
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    {index > 0 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeTimeSlot(index)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={addTimeSlot}
+                >
+                  添加时间段
+                </Button>
               </div>
 
               <FormField
@@ -251,16 +288,16 @@ const EventDialog: React.FC<EventDialogProps> = ({
                   type="button"
                   variant="destructive"
                   onClick={onDelete}
-                  size="sm"
-                  className="flex items-center gap-1"
                 >
-                  <Trash2 className="h-4 w-4" />
                   删除
                 </Button>
               )}
-              <Button type="submit">
-                {selectedEvent ? '更新' : '保存'}
-              </Button>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" onClick={onClose}>
+                  取消
+                </Button>
+                <Button type="submit">保存</Button>
+              </div>
             </DialogFooter>
           </form>
         </Form>

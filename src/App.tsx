@@ -2,10 +2,7 @@ import Calendar from './component/Calendar'
 
 function App() {
   return (
-    <>
-      <Calendar />
-    </>
+    <Calendar />
   )
 }
-
 export default App

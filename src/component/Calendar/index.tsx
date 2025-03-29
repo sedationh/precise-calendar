@@ -10,12 +10,23 @@ import EventDialog from './EventDialog'
 import 'bootstrap/dist/css/bootstrap.css'
 import 'bootstrap-icons/font/bootstrap-icons.css'
 
+interface TimeSlot {
+  start: Date
+  end?: Date
+}
+
 interface CustomEventSourceInput {
   id: string
   title: string
-  start: Date
-  end?: Date // 添加结束日期支持多天事件
-  allDay: boolean // 默认都是全天事件
+  timeSlots: TimeSlot[]
+  allDay: boolean
+}
+
+interface DialogState {
+  isOpen: boolean
+  mode: 'create' | 'edit'
+  event: CustomEventSourceInput | null
+  initialDate: Date
 }
 
 export default function Calendar() {
@@ -23,15 +34,28 @@ export default function Calendar() {
   // 注意：localStorage 存储的是字符串，所以需要转换日期
   // TODO 这里 useLocalStorageState 不应该返回 undefined 类型
   const [events, setEvents] = useLocalStorageState<CustomEventSourceInput[]>(
-    'calendar-events', // localStorage 中的键名
+    'calendar-events',
     {
       defaultValue: [
-        { id: '1', title: '示例事件1', start: new Date(), allDay: true },
+        {
+          id: '1',
+          title: '示例事件1',
+          timeSlots: [{ start: new Date(), end: new Date() }],
+          allDay: true,
+        },
         {
           id: '2',
           title: '示例多天事件',
-          start: new Date(),
-          end: new Date(Date.now() + 2 * 86400000), // 当前日期加2天
+          timeSlots: [
+            {
+              start: new Date(),
+              end: new Date(Date.now() + 2 * 86400000),
+            },
+            {
+              start: new Date(Date.now() + 5 * 86400000),
+              end: new Date(Date.now() + 7 * 86400000),
+            },
+          ],
           allDay: true,
         },
       ],
@@ -43,8 +67,10 @@ export default function Calendar() {
         return Array.isArray(parsed)
           ? parsed.map(event => ({
               ...event,
-              start: new Date(event.start),
-              end: event.end ? new Date(event.end) : undefined,
+              timeSlots: event.timeSlots.map((slot: TimeSlot) => ({
+                start: new Date(slot.start),
+                end: slot.end ? new Date(slot.end) : undefined,
+              })),
               allDay: event.allDay !== undefined ? event.allDay : true,
             }))
           : []
@@ -52,65 +78,73 @@ export default function Calendar() {
     },
   )
 
-  // 添加状态用于控制对话框
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [selectedDate, setSelectedDate] = useState(new Date())
-  const [selectedEvent, setSelectedEvent] = useState<CustomEventSourceInput | null>(null)
+  // 使用一个状态来管理对话框
+  const [dialogState, setDialogState] = useState<DialogState>({
+    isOpen: false,
+    mode: 'create',
+    event: null,
+    initialDate: new Date(),
+  })
 
   const handleEventDrop = (info: EventDropArg) => {
-    // 获取被拖拽的事件ID
-    const eventId = info.event.id
+    const [eventId, slotIndex] = info.event.id.split('-').map(Number)
 
-    // 创建更新后的事件数组
     const updatedEvents = events?.map((event) => {
-      if (event.id === eventId) {
-        // 返回更新后的事件，保持原始数据不变，只更新开始和结束时间
+      if (event.id === `${eventId}`) {
+        const updatedTimeSlots = event.timeSlots.map((slot, index) => {
+          if (index === slotIndex) {
+            return {
+              ...slot,
+              start: info.event.start || new Date(),
+              end: info.event.end || undefined,
+            }
+          }
+          return slot
+        })
         return {
           ...event,
-          start: info.event.start || new Date(),
-          end: info.event.end || undefined,
+          timeSlots: updatedTimeSlots,
         }
       }
       return event
     })
-
-    // 更新状态
     setEvents(updatedEvents)
   }
 
-  // 添加事件调整大小的处理函数
   const handleEventResize = (info: EventChangeArg) => {
-    // 获取被调整的事件ID
-    const eventId = info.event.id
+    const [eventId, slotIndex] = info.event.id.split('-').map(Number)
 
-    // 创建更新后的事件数组
     const updatedEvents = events?.map((event) => {
-      if (event.id === eventId) {
-        // 返回更新后的事件，保持原始数据不变，只更新结束时间
+      if (event.id === eventId.toString()) {
+        const updatedTimeSlots = event.timeSlots.map((slot, index) => {
+          if (index === slotIndex) {
+            return {
+              ...slot,
+              start: info.event.start!,
+              end: info.event.end!,
+            }
+          }
+          return slot
+        })
         return {
           ...event,
-          start: info.event.start!,
-          end: info.event.end!,
+          timeSlots: updatedTimeSlots,
         }
       }
       return event
     })
-
-    // 更新状态
     setEvents(updatedEvents)
   }
 
-  // 添加保存事件的处理函数
   const handleSaveEvent = (eventData: {
     title: string
-    start: Date
-    end?: Date
+    timeSlots: TimeSlot[]
     allDay: boolean
   }) => {
-    if (selectedEvent) {
+    if (dialogState.mode === 'edit' && dialogState.event) {
       // 更新现有事件
       const updatedEvents = events?.map(event =>
-        event.id === selectedEvent.id
+        event.id === dialogState.event?.id
           ? { ...event, ...eventData }
           : event,
       ) || []
@@ -125,37 +159,39 @@ export default function Calendar() {
       setEvents([...(events || []), newEvent])
     }
 
-    setIsDialogOpen(false)
+    setDialogState(prev => ({ ...prev, isOpen: false }))
   }
 
   const handleDateClick = (arg: DateClickArg) => {
-    setSelectedDate(new Date(arg.date))
-    setSelectedEvent(null) // 清空选中的事件
-    setIsDialogOpen(true)
+    setDialogState({
+      isOpen: true,
+      mode: 'create',
+      event: null,
+      initialDate: new Date(arg.date),
+    })
   }
 
-  // 修改事件点击处理函数
   const handleEventClick = (clickInfo: EventClickArg) => {
-    // 获取点击的事件
-    const eventId = clickInfo.event.id
+    const eventId = clickInfo.event.id.split('-')[0]
     const event = events?.find(e => e.id === eventId)
 
     if (!event) {
       return
     }
 
-    setSelectedEvent(event)
-    setSelectedDate(event.start)
-    setIsDialogOpen(true)
+    setDialogState({
+      isOpen: true,
+      mode: 'edit',
+      event,
+      initialDate: event.timeSlots[0].start,
+    })
   }
 
-  // 添加删除事件的处理函数
   const handleDeleteEvent = () => {
-    if (selectedEvent) {
-      // 过滤掉要删除的事件
-      const updatedEvents = events?.filter(event => event.id !== selectedEvent.id) || []
+    if (dialogState.event) {
+      const updatedEvents = events?.filter(event => event.id !== dialogState.event?.id) || []
       setEvents(updatedEvents)
-      setIsDialogOpen(false)
+      setDialogState(prev => ({ ...prev, isOpen: false }))
     }
   }
 
@@ -170,24 +206,29 @@ export default function Calendar() {
         editable={true}
         eventResizableFromStart={true}
         droppable={true}
-        events={events}
+        events={events?.flatMap(event =>
+          event.timeSlots.map((slot, index) => ({
+            id: `${event.id}-${index}`,
+            title: event.title,
+            start: slot.start,
+            end: slot.end,
+            allDay: event.allDay,
+          })),
+        )}
         eventDrop={handleEventDrop}
         eventResize={handleEventResize}
         dateClick={handleDateClick}
         eventClick={handleEventClick}
-        // 当日期有太多事件时，显示"更多"链接
-        // dayMaxEvents={true}
         firstDay={1}
       />
 
-      {/* 修改事件对话框 */}
       <EventDialog
-        isOpen={isDialogOpen}
-        onClose={() => setIsDialogOpen(false)}
+        isOpen={dialogState.isOpen}
+        onClose={() => setDialogState(prev => ({ ...prev, isOpen: false }))}
         onSave={handleSaveEvent}
         onDelete={handleDeleteEvent}
-        selectedDate={selectedDate}
-        selectedEvent={selectedEvent}
+        selectedDate={dialogState.initialDate}
+        selectedEvent={dialogState.event}
       />
     </>
   )
