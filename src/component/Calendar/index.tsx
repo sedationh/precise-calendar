@@ -1,4 +1,4 @@
-import type { EventDropArg } from '@fullcalendar/core'
+import type { EventClickArg, EventDropArg } from '@fullcalendar/core'
 import bootstrap5Plugin from '@fullcalendar/bootstrap5'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
@@ -59,6 +59,37 @@ export default function Calendar() {
     setEvents(updatedEvents)
   }
 
+  // 添加日期点击处理函数
+  const handleDateClick = (arg: any) => {
+    // eslint-disable-next-line no-alert
+    const title = prompt('请输入事件标题:')
+    if (title) {
+      const newEvent = {
+        id: Date.now().toString(), // 使用时间戳作为唯一ID
+        title,
+        start: new Date(arg.date),
+      }
+
+      // 添加新事件到事件列表中
+      setEvents([...(events || []), newEvent])
+    }
+  }
+
+  // 添加事件点击处理函数
+  const handleEventClick = (clickInfo: EventClickArg) => {
+    // eslint-disable-next-line no-alert
+    if (confirm(`是否要删除事件 "${clickInfo.event.title}"?`)) {
+      // 获取要删除的事件ID
+      const eventId = clickInfo.event.id
+
+      // 过滤掉要删除的事件
+      const updatedEvents = events?.filter(event => event.id !== eventId) || []
+
+      // 更新事件列表
+      setEvents(updatedEvents)
+    }
+  }
+
   return (
     <FullCalendar
       plugins={[dayGridPlugin, bootstrap5Plugin, interactionPlugin]}
@@ -70,6 +101,8 @@ export default function Calendar() {
       droppable={true}
       events={events}
       eventDrop={handleEventDrop}
+      dateClick={handleDateClick}
+      eventClick={handleEventClick} // 添加事件点击处理
     />
   )
 }
