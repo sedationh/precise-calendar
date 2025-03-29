@@ -80,6 +80,23 @@ const EventDialog: React.FC<EventDialogProps> = ({
     }
   }, [isOpen, selectedEvent, selectedDate])
 
+  // 添加 ESC 键监听器
+  useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (isOpen && event.key === 'Escape') {
+        onClose()
+      }
+    }
+
+    // 添加全局键盘事件监听器
+    window.addEventListener('keydown', handleEscapeKey)
+
+    // 组件卸载时移除事件监听器
+    return () => {
+      window.removeEventListener('keydown', handleEscapeKey)
+    }
+  }, [isOpen, onClose])
+
   // 用于更新单个表单字段的辅助函数
   const updateField = (field: keyof EventFormState, value: string) => {
     setFormState(prev => ({
