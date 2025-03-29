@@ -3,7 +3,7 @@ import bootstrap5Plugin from '@fullcalendar/bootstrap5'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import FullCalendar from '@fullcalendar/react'
-import { useState } from 'react'
+import { useLocalStorageState } from 'ahooks'
 import 'bootstrap/dist/css/bootstrap.css'
 import 'bootstrap-icons/font/bootstrap-icons.css'
 
@@ -14,10 +14,30 @@ interface CustomEventSourceInput {
 }
 
 export default function Calendar() {
-  const [events, setEvents] = useState<CustomEventSourceInput[]>([
-    { id: '1', title: '示例事件', start: new Date() },
-    { id: '2', title: '示例事件', start: new Date() },
-  ])
+  // 使用 useLocalStorageState 替代 useState
+  // 注意：localStorage 存储的是字符串，所以需要转换日期
+  // TODO 这里 useLocalStorageState 不应该返回 undefined 类型
+  const [events, setEvents] = useLocalStorageState<CustomEventSourceInput[]>(
+    'calendar-events', // localStorage 中的键名
+    {
+      defaultValue: [
+        { id: '1', title: '示例事件1', start: new Date() },
+        { id: '2', title: '示例事件2', start: new Date(Date.now() + 86400000) }, // 明天
+      ],
+      serializer: value => JSON.stringify(value, (_, v) =>
+        v instanceof Date ? v.toISOString() : v),
+
+      deserializer: (value) => {
+        const parsed = JSON.parse(value)
+        return Array.isArray(parsed)
+          ? parsed.map(event => ({
+              ...event,
+              start: new Date(event.start),
+            }))
+          : []
+      },
+    },
+  )
 
   const handleEventDrop = (info: EventDropArg) => {
     // 获取被拖拽的事件ID
