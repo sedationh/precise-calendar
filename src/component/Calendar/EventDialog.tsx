@@ -1,7 +1,36 @@
 // TODO
-/* eslint-disable react-hooks-extra/no-direct-set-state-in-use-effect */
-import React, { useEffect, useState } from 'react'
-import './EventDialog.css'
+
+import { Button } from '@/components/ui/button'
+import { Calendar } from '@/components/ui/calendar'
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+} from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import { Textarea } from '@/components/ui/textarea'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
+import { format } from 'date-fns'
+import { CalendarIcon, Trash2 } from 'lucide-react'
+import React, { useEffect } from 'react'
+import { useForm } from 'react-hook-form'
+import * as z from 'zod'
 
 // 添加事件接口
 interface CustomEventSourceInput {
@@ -10,7 +39,7 @@ interface CustomEventSourceInput {
   start: Date
   end?: Date
   allDay: boolean
-  description?: string // 保留描述字段
+  description?: string
 }
 
 interface EventDialogProps {
@@ -22,22 +51,15 @@ interface EventDialogProps {
   selectedEvent: CustomEventSourceInput | null
 }
 
-// 表单状态接口
-interface EventFormState {
-  title: string
-  startDate: string
-  endDate: string
-  description: string
-}
+// 创建表单验证模式
+const formSchema = z.object({
+  title: z.string().min(1, { message: '标题不能为空' }),
+  startDate: z.date(),
+  endDate: z.date(),
+  description: z.string().optional(),
+})
 
-// TODO 用 dayjs 类似的库来处理日期
-// 格式化为本地日期的辅助函数，避免时区问题
-function formatLocalDate(date: Date): string {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
+type FormValues = z.infer<typeof formSchema>
 
 const EventDialog: React.FC<EventDialogProps> = ({
   isOpen,
@@ -47,145 +69,205 @@ const EventDialog: React.FC<EventDialogProps> = ({
   selectedDate,
   selectedEvent,
 }) => {
-  // 使用单个状态对象，移除 color
-  const [formState, setFormState] = useState<EventFormState>({
-    title: '',
-    startDate: formatLocalDate(selectedDate),
-    endDate: formatLocalDate(selectedDate),
-    description: '',
+  // 使用 react-hook-form 设置表单
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      title: 'Happy',
+      startDate: selectedDate,
+      endDate: selectedDate,
+      description: '',
+    },
   })
 
-  // 监听 isOpen 的变化来初始化表单数据
+  // 当对话框打开或选中的事件变化时重置表单
   useEffect(() => {
-    // 只在对话框打开时初始化数据
     if (isOpen) {
       if (selectedEvent) {
-        setFormState({
+        form.reset({
           title: selectedEvent.title,
-          startDate: formatLocalDate(selectedEvent.start),
-          endDate: selectedEvent.end
-            ? formatLocalDate(selectedEvent.end)
-            : formatLocalDate(selectedEvent.start),
+          startDate: selectedEvent.start,
+          endDate: selectedEvent.end || selectedEvent.start,
           description: selectedEvent.description || '',
         })
       }
       else {
-        setFormState({
+        form.reset({
           title: 'Happy',
-          startDate: formatLocalDate(selectedDate),
-          endDate: formatLocalDate(selectedDate),
+          startDate: selectedDate,
+          endDate: selectedDate,
           description: '',
         })
       }
     }
-  }, [isOpen, selectedEvent, selectedDate])
+  }, [isOpen, selectedEvent, selectedDate, form])
 
-  // 添加 ESC 键监听器
-  useEffect(() => {
-    const handleEscapeKey = (event: KeyboardEvent) => {
-      if (isOpen && event.key === 'Escape') {
-        onClose()
-      }
-    }
-
-    // 添加全局键盘事件监听器
-    window.addEventListener('keydown', handleEscapeKey)
-
-    // 组件卸载时移除事件监听器
-    return () => {
-      window.removeEventListener('keydown', handleEscapeKey)
-    }
-  }, [isOpen, onClose])
-
-  // 用于更新单个表单字段的辅助函数
-  const updateField = (field: keyof EventFormState, value: string) => {
-    setFormState(prev => ({
-      ...prev,
-      [field]: value,
-    }))
+  // 检查两个日期是否是同一天
+  const isSameDay = (date1: Date, date2: Date) => {
+    return (
+      date1.getFullYear() === date2.getFullYear()
+      && date1.getMonth() === date2.getMonth()
+      && date1.getDate() === date2.getDate()
+    )
   }
 
-  if (!isOpen)
-    return null
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-
-    // 确保创建的日期对象是本地时间的午夜时刻
-    const createDateAtMidnight = (dateStr: string) => {
-      const [year, month, day] = dateStr.split('-').map(Number)
-      return new Date(year, month - 1, day)
-    }
-
+  // 处理表单提交
+  const onSubmit = (data: FormValues) => {
     onSave({
-      title: formState.title,
-      start: createDateAtMidnight(formState.startDate),
-      end: formState.endDate !== formState.startDate ? createDateAtMidnight(formState.endDate) : undefined,
+      title: data.title,
+      start: data.startDate,
+      end: !isSameDay(data.startDate, data.endDate) ? data.endDate : undefined,
       allDay: true,
-      description: formState.description,
+      description: data.description,
     })
   }
 
   return (
-    <div className="event-dialog-overlay">
-      <div className="event-dialog">
-        <div className="event-dialog-header">
-          <input
-            type="text"
-            placeholder="添加日程标题"
-            value={formState.title}
-            onChange={e => updateField('title', e.target.value)}
-            className="event-title-input"
-          />
-          <div className="event-dialog-actions">
-            {selectedEvent && (
-              <button
-                className="delete-button"
-                type="button"
-                onClick={onDelete}
-                title="删除事件"
-              >
-                <i className="bi bi-trash"></i>
-              </button>
-            )}
-            <button className="close-button" type="button" onClick={onClose}>
-              <i className="bi bi-x"></i>
-            </button>
-          </div>
-        </div>
+    <Dialog open={isOpen} onOpenChange={open => !open && onClose()}>
+      <DialogContent className="sm:max-w-[425px]">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            <DialogHeader>
+              <VisuallyHidden>
+                <DialogTitle>
+                  {selectedEvent ? '编辑日程' : '新建日程'}
+                </DialogTitle>
+              </VisuallyHidden>
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem className="space-y-0">
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="添加日程标题"
+                        className="text-lg font-medium border-none focus-visible:ring-0 focus-visible:ring-offset-0 px-0"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </DialogHeader>
 
-        <div className="event-date-selector">
-          <i className="bi bi-calendar"></i>
-          <input
-            type="date"
-            value={formState.startDate}
-            onChange={e => updateField('startDate', e.target.value)}
-          />
-          <span className="date-separator">→</span>
-          <input
-            type="date"
-            value={formState.endDate}
-            onChange={e => updateField('endDate', e.target.value)}
-          />
-        </div>
+            <div className="space-y-4 py-4">
+              <div className="flex items-center gap-2">
+                <CalendarIcon className="h-5 w-5 text-muted-foreground" />
+                <div className="grid grid-cols-2 gap-2">
+                  <FormField
+                    control={form.control}
+                    name="startDate"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                className="pl-3 text-left font-normal"
+                              >
+                                {field.value
+                                  ? (
+                                      format(field.value, 'yyyy-MM-dd')
+                                    )
+                                  : (
+                                      <span>选择开始日期</span>
+                                    )}
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.value}
+                              onSelect={field.onChange}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </FormItem>
+                    )}
+                  />
 
-        <div className="event-description">
-          <i className="bi bi-list"></i>
-          <textarea
-            placeholder="添加说明"
-            value={formState.description}
-            onChange={e => updateField('description', e.target.value)}
-          >
-          </textarea>
-        </div>
+                  <FormField
+                    control={form.control}
+                    name="endDate"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                className="pl-3 text-left font-normal"
+                              >
+                                {field.value
+                                  ? (
+                                      format(field.value, 'yyyy-MM-dd')
+                                    )
+                                  : (
+                                      <span>选择结束日期</span>
+                                    )}
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.value}
+                              onSelect={field.onChange}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
 
-        <div className="event-dialog-footer">
-          <button className="save-button" type="button" onClick={handleSubmit}>
-            {selectedEvent ? '更新' : '保存'}
-          </button>
-        </div>
-      </div>
-    </div>
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <span className="h-5 w-5 text-muted-foreground">📝</span>
+                      描述
+                    </FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="添加说明"
+                        className="resize-none"
+                        {...field}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <DialogFooter className="flex justify-between">
+              {selectedEvent && (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={onDelete}
+                  size="sm"
+                  className="flex items-center gap-1"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  删除
+                </Button>
+              )}
+              <Button type="submit">
+                {selectedEvent ? '更新' : '保存'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
   )
 }
 
