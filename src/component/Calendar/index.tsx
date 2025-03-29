@@ -44,7 +44,7 @@ export default function Calendar() {
     const eventId = info.event.id
 
     // 创建更新后的事件数组
-    const updatedEvents = events.map((event) => {
+    const updatedEvents = events?.map((event) => {
       if (event.id === eventId) {
         // 返回更新后的事件，保持原始数据不变，只更新开始时间
         return {
