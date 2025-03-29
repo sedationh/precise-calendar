@@ -160,7 +160,7 @@ const EventDialog: React.FC<EventDialogProps> = ({
                       <Input
                         {...field}
                         placeholder="添加日程标题"
-                        className="text-lg font-medium border-none focus-visible:ring-0 focus-visible:ring-offset-0 px-0"
+                        className="text-lg font-medium border-none focus-visible:ring-0 focus-visible:ring-offset-0"
                       />
                     </FormControl>
                   </FormItem>
