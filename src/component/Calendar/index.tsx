@@ -1,13 +1,14 @@
 import type { EventChangeArg, EventClickArg, EventDropArg } from '@fullcalendar/core'
 import type { DateClickArg } from '@fullcalendar/interaction'
 import { Button } from '@/components/ui/button'
+import { History } from '@/utils/history'
 import bootstrap5Plugin from '@fullcalendar/bootstrap5'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import FullCalendar from '@fullcalendar/react'
 import { useLocalStorageState } from 'ahooks'
 import { addDays, isWeekend, startOfDay, startOfMonth } from 'date-fns'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import EventDialog from './EventDialog'
 import 'bootstrap/dist/css/bootstrap.css'
 import 'bootstrap-icons/font/bootstrap-icons.css'
@@ -67,11 +68,6 @@ function splitTimeSlotsByWeekend(start: Date, end: Date): TimeSlot[] {
 }
 
 export default function Calendar() {
-  const fileInputRef = useRef<HTMLInputElement>(null)
-
-  // 使用 useLocalStorageState 替代 useState
-  // 注意：localStorage 存储的是字符串，所以需要转换日期
-  // TODO 这里 useLocalStorageState 不应该返回 undefined 类型
   const [events, setEvents] = useLocalStorageState<CustomEventSourceInput[]>(
     'calendar-events',
     {
@@ -125,7 +121,6 @@ export default function Calendar() {
       ],
       serializer: value => JSON.stringify(value, (_, v) =>
         v instanceof Date ? v.toISOString() : v),
-
       deserializer: (value) => {
         const parsed = JSON.parse(value)
         return Array.isArray(parsed)
@@ -141,6 +136,43 @@ export default function Calendar() {
       },
     },
   )
+
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const historyRef = useRef<History<CustomEventSourceInput[]>>(null)
+
+  if (!historyRef.current) {
+    historyRef.current = new History<CustomEventSourceInput[]>(events!)
+  }
+
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
+        e.preventDefault()
+        if (e.shiftKey) {
+          const newState = historyRef.current?.redo()
+          if (newState) {
+            setEvents(newState)
+          }
+        }
+        else {
+          const newState = historyRef.current?.undo()
+          if (newState) {
+            setEvents(newState)
+          }
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const updateEvents = (newEvents: CustomEventSourceInput[]) => {
+    setEvents(newEvents)
+    historyRef.current?.push(newEvents)
+  }
 
   // 使用一个状态来管理对话框
   const [dialogState, setDialogState] = useState<DialogState>({
@@ -172,7 +204,7 @@ export default function Calendar() {
       }
       return event
     })
-    setEvents(updatedEvents)
+    updateEvents(updatedEvents || [])
   }
 
   const handleEventResize = (info: EventChangeArg) => {
@@ -182,8 +214,6 @@ export default function Calendar() {
       if (event.id === eventId.toString()) {
         const updatedTimeSlots = event.timeSlots.map((slot, index) => {
           if (index === slotIndex) {
-            // FullCalendar 的时间是一个 [start, end) 的描述
-            // console.log(info.event.start, info.event.end)
             return {
               ...slot,
               start: info.event.start!,
@@ -199,7 +229,7 @@ export default function Calendar() {
       }
       return event
     })
-    setEvents(updatedEvents)
+    updateEvents(updatedEvents || [])
   }
 
   const handleSaveEvent = (eventData: {
@@ -210,21 +240,19 @@ export default function Calendar() {
     color?: string
   }) => {
     if (dialogState.mode === 'edit' && dialogState.event) {
-      // 更新现有事件
       const updatedEvents = events?.map(event =>
         event.id === dialogState.event?.id
           ? { ...event, ...eventData }
           : event,
       ) || []
-      setEvents(updatedEvents)
+      updateEvents(updatedEvents)
     }
     else {
-      // 添加新事件
       const newEvent = {
         id: Date.now().toString(),
         ...eventData,
       }
-      setEvents([...(events || []), newEvent])
+      updateEvents([...(events || []), newEvent])
     }
 
     setDialogState(prev => ({ ...prev, isOpen: false }))
@@ -258,7 +286,7 @@ export default function Calendar() {
   const handleDeleteEvent = () => {
     if (dialogState.event) {
       const updatedEvents = events?.filter(event => event.id !== dialogState.event?.id) || []
-      setEvents(updatedEvents)
+      updateEvents(updatedEvents)
       setDialogState(prev => ({ ...prev, isOpen: false }))
     }
   }
@@ -303,7 +331,7 @@ export default function Calendar() {
           allDay: event.allDay !== undefined ? event.allDay : true,
         }))
 
-        setEvents(processedEvents)
+        updateEvents(processedEvents)
       }
       catch (error) {
         console.error('Import failed:', error)
