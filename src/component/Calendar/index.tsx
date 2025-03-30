@@ -240,9 +240,11 @@ export default function Calendar() {
         selectedEvent={dialogState.event}
       />
 
-      <pre>
-        {JSON.stringify(events, null, 2)}
-      </pre>
+      {process.env.NODE_ENV === 'development' && (
+        <pre>
+          {JSON.stringify(events, null, 2)}
+        </pre>
+      )}
     </>
   )
 }
