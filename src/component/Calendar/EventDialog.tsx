@@ -133,7 +133,7 @@ const EventDialog: React.FC<EventDialogProps> = ({
       title: data.title,
       timeSlots: data.timeSlots.map(slot => ({
         start: slot.start,
-        end: !isSameDay(slot.start, slot.end || slot.start) ? slot.end : undefined,
+        end: slot.end ?? slot.start,
       })),
       allDay: true,
       description: data.description,
