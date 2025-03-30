@@ -1,11 +1,12 @@
 import type { EventChangeArg, EventClickArg, EventDropArg } from '@fullcalendar/core'
 import type { DateClickArg } from '@fullcalendar/interaction'
+import { Button } from '@/components/ui/button'
 import bootstrap5Plugin from '@fullcalendar/bootstrap5'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import FullCalendar from '@fullcalendar/react'
 import { useLocalStorageState } from 'ahooks'
-import { useState, useRef } from 'react'
+import { useRef, useState } from 'react'
 import EventDialog from './EventDialog'
 import 'bootstrap/dist/css/bootstrap.css'
 import 'bootstrap-icons/font/bootstrap-icons.css'
@@ -205,8 +206,9 @@ export default function Calendar() {
   }
 
   const handleExportEvents = () => {
-    if (!events) return
-    
+    if (!events)
+      return
+
     const jsonString = JSON.stringify(events, null, 2)
     const blob = new Blob([jsonString], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
@@ -221,16 +223,17 @@ export default function Calendar() {
 
   const handleImportEvents = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-    if (!file) return
+    if (!file)
+      return
 
     const reader = new FileReader()
     reader.onload = (e) => {
       try {
         const content = e.target?.result as string
         const parsedEvents = JSON.parse(content)
-        
+
         if (!Array.isArray(parsedEvents)) {
-          throw new Error('Imported data must be an array of events')
+          throw new TypeError('Imported data must be an array of events')
         }
 
         const processedEvents = parsedEvents.map(event => ({
@@ -243,10 +246,9 @@ export default function Calendar() {
         }))
 
         setEvents(processedEvents)
-        alert('Events imported successfully!')
-      } catch (error) {
+      }
+      catch (error) {
         console.error('Import failed:', error)
-        alert('Import failed: Please ensure the file format is correct')
       }
     }
     reader.readAsText(file)
@@ -255,18 +257,18 @@ export default function Calendar() {
   return (
     <>
       <div className="mb-4 flex gap-2 flex-row-reverse">
-        <button
-          className="btn btn-primary"
+        <Button
           onClick={handleExportEvents}
+          className="rounded"
         >
           Export Events
-        </button>
-        <button
-          className="btn btn-secondary"
+        </Button>
+        <Button
           onClick={() => fileInputRef.current?.click()}
+          className="rounded"
         >
           Import Events
-        </button>
+        </Button>
         <input
           ref={fileInputRef}
           type="file"
@@ -311,12 +313,6 @@ export default function Calendar() {
         selectedDate={dialogState.initialDate}
         selectedEvent={dialogState.event}
       />
-
-      {process.env.NODE_ENV === 'development' && (
-        <pre>
-          {JSON.stringify(events, null, 2)}
-        </pre>
-      )}
     </>
   )
 }

@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/popover'
 import { Textarea } from '@/components/ui/textarea'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { format, addDays, subDays } from 'date-fns'
+import { addDays, format, subDays } from 'date-fns'
 import { CalendarIcon, Trash2 } from 'lucide-react'
 import React, { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
@@ -101,10 +101,10 @@ const EventDialog: React.FC<EventDialogProps> = ({
     if (isOpen) {
       if (selectedEvent) {
         // 确保时间段按开始时间排序
-        const sortedTimeSlots = [...selectedEvent.timeSlots].sort((a, b) => 
-          a.start.getTime() - b.start.getTime()
+        const sortedTimeSlots = [...selectedEvent.timeSlots].sort((a, b) =>
+          a.start.getTime() - b.start.getTime(),
         )
-        
+
         form.reset({
           title: selectedEvent.title,
           timeSlots: sortedTimeSlots,
@@ -115,9 +115,9 @@ const EventDialog: React.FC<EventDialogProps> = ({
       else {
         form.reset({
           title: '',
-          timeSlots: [{ 
-            start: selectedDate, 
-            end: addDays(selectedDate, 1)
+          timeSlots: [{
+            start: selectedDate,
+            end: addDays(selectedDate, 1),
           }],
           description: '',
           color: '#3788d8',
@@ -125,7 +125,6 @@ const EventDialog: React.FC<EventDialogProps> = ({
       }
     }
   }, [isOpen, selectedEvent, selectedDate, form])
-
 
   // 处理表单提交
   const onSubmit = (data: FormValues) => {
@@ -145,13 +144,13 @@ const EventDialog: React.FC<EventDialogProps> = ({
   const removeTimeSlot = (index: number) => {
     const currentTimeSlots = form.getValues('timeSlots')
     const newTimeSlots = currentTimeSlots.filter((_, i) => i !== index)
-    
+
     if (newTimeSlots.length === 0) {
       // 如果删除后没有时间段了，删除整个任务
       onDelete()
       return
     }
-    
+
     // 按开始时间排序
     newTimeSlots.sort((a, b) => a.start.getTime() - b.start.getTime())
     form.setValue('timeSlots', newTimeSlots)
@@ -205,6 +204,7 @@ const EventDialog: React.FC<EventDialogProps> = ({
                   <span className="text-sm font-medium">Time Slots</span>
                 </div>
                 {form.watch('timeSlots').map((_, index) => (
+                  // eslint-disable-next-line react/no-array-index-key
                   <div key={index} className="flex items-center gap-2">
                     <div className="grid grid-cols-2 gap-2 flex-1">
                       <FormField
