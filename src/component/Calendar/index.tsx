@@ -6,7 +6,7 @@ import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import FullCalendar from '@fullcalendar/react'
 import { useLocalStorageState } from 'ahooks'
-import { addDays, startOfDay } from 'date-fns'
+import { addDays, isWeekend, startOfDay, startOfMonth } from 'date-fns'
 import { useRef, useState } from 'react'
 import EventDialog from './EventDialog'
 import 'bootstrap/dist/css/bootstrap.css'
@@ -32,6 +32,40 @@ interface DialogState {
   initialDate: Date
 }
 
+// 辅助函数：将时间段按周末拆分
+function splitTimeSlotsByWeekend(start: Date, end: Date): TimeSlot[] {
+  const slots: TimeSlot[] = []
+  let currentStart = start
+  const currentEnd = end
+
+  while (currentStart < currentEnd) {
+    // 找到下一个周末的开始
+    let nextWeekendStart = new Date(currentStart)
+    while (nextWeekendStart < currentEnd && !isWeekend(nextWeekendStart)) {
+      nextWeekendStart = addDays(nextWeekendStart, 1)
+    }
+
+    // 如果找到了周末，添加工作日时间段
+    if (nextWeekendStart > currentStart) {
+      slots.push({
+        start: currentStart,
+        end: nextWeekendStart,
+      })
+    }
+
+    // 找到周末的结束
+    let weekendEnd = new Date(nextWeekendStart)
+    while (weekendEnd < currentEnd && isWeekend(weekendEnd)) {
+      weekendEnd = addDays(weekendEnd, 1)
+    }
+
+    // 更新当前开始时间
+    currentStart = weekendEnd
+  }
+
+  return slots
+}
+
 export default function Calendar() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -44,17 +78,11 @@ export default function Calendar() {
       defaultValue: [
         {
           id: '1',
-          title: 'Conference',
-          timeSlots: [
-            {
-              start: startOfDay(new Date()),
-              end: startOfDay(addDays(new Date(), 1)),
-            },
-            {
-              start: startOfDay(addDays(new Date(), 2)),
-              end: startOfDay(addDays(new Date(), 3)),
-            },
-          ],
+          title: 'Monthly Conference',
+          timeSlots: splitTimeSlotsByWeekend(
+            startOfDay(startOfMonth(new Date())),
+            startOfDay(addDays(startOfMonth(new Date()), 15)),
+          ),
           allDay: true,
           color: '#3788d8',
         },
@@ -62,14 +90,14 @@ export default function Calendar() {
           id: '2',
           title: 'Project Phase',
           timeSlots: [
-            {
-              start: startOfDay(new Date()),
-              end: startOfDay(addDays(new Date(), 2)),
-            },
-            {
-              start: startOfDay(addDays(new Date(), 5)),
-              end: startOfDay(addDays(new Date(), 7)),
-            },
+            ...splitTimeSlotsByWeekend(
+              startOfDay(startOfMonth(new Date())),
+              startOfDay(addDays(startOfMonth(new Date()), 10)),
+            ),
+            ...splitTimeSlotsByWeekend(
+              startOfDay(addDays(startOfMonth(new Date()), 15)),
+              startOfDay(addDays(startOfMonth(new Date()), 25)),
+            ),
           ],
           allDay: true,
           color: '#28a745',
@@ -78,18 +106,18 @@ export default function Calendar() {
           id: '3',
           title: 'Training Sessions',
           timeSlots: [
-            {
-              start: startOfDay(addDays(new Date(), 1)),
-              end: startOfDay(addDays(new Date(), 2)),
-            },
-            {
-              start: startOfDay(addDays(new Date(), 4)),
-              end: startOfDay(addDays(new Date(), 5)),
-            },
-            {
-              start: startOfDay(addDays(new Date(), 8)),
-              end: startOfDay(addDays(new Date(), 9)),
-            },
+            ...splitTimeSlotsByWeekend(
+              startOfDay(addDays(startOfMonth(new Date()), 5)),
+              startOfDay(addDays(startOfMonth(new Date()), 8)),
+            ),
+            ...splitTimeSlotsByWeekend(
+              startOfDay(addDays(startOfMonth(new Date()), 12)),
+              startOfDay(addDays(startOfMonth(new Date()), 15)),
+            ),
+            ...splitTimeSlotsByWeekend(
+              startOfDay(addDays(startOfMonth(new Date()), 20)),
+              startOfDay(addDays(startOfMonth(new Date()), 23)),
+            ),
           ],
           allDay: true,
           color: '#ffc107',
