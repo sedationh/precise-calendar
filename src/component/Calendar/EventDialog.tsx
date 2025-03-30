@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/popover'
 import { Textarea } from '@/components/ui/textarea'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { format } from 'date-fns'
+import { format, addDays, subDays } from 'date-fns'
 import { CalendarIcon, Trash2 } from 'lucide-react'
 import React, { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
@@ -115,7 +115,10 @@ const EventDialog: React.FC<EventDialogProps> = ({
       else {
         form.reset({
           title: '',
-          timeSlots: [{ start: selectedDate, end: selectedDate }],
+          timeSlots: [{ 
+            start: selectedDate, 
+            end: addDays(selectedDate, 1)
+          }],
           description: '',
           color: '#3788d8',
         })
@@ -123,14 +126,6 @@ const EventDialog: React.FC<EventDialogProps> = ({
     }
   }, [isOpen, selectedEvent, selectedDate, form])
 
-  // 检查两个日期是否是同一天
-  const isSameDay = (date1: Date, date2: Date) => {
-    return (
-      date1.getFullYear() === date2.getFullYear()
-      && date1.getMonth() === date2.getMonth()
-      && date1.getDate() === date2.getDate()
-    )
-  }
 
   // 处理表单提交
   const onSubmit = (data: FormValues) => {
@@ -256,7 +251,7 @@ const EventDialog: React.FC<EventDialogProps> = ({
                                     className="pl-3 text-left font-normal"
                                   >
                                     {field.value
-                                      ? format(field.value, 'yyyy-MM-dd')
+                                      ? format(subDays(field.value, 1), 'yyyy-MM-dd')
                                       : <span>选择结束日期</span>}
                                   </Button>
                                 </FormControl>
@@ -264,8 +259,8 @@ const EventDialog: React.FC<EventDialogProps> = ({
                               <PopoverContent className="w-auto p-0" align="start">
                                 <Calendar
                                   mode="single"
-                                  selected={field.value}
-                                  onSelect={field.onChange}
+                                  selected={field.value ? subDays(field.value, 1) : undefined}
+                                  onSelect={(date) => field.onChange(date ? addDays(date, 1) : undefined)}
                                   initialFocus
                                 />
                               </PopoverContent>

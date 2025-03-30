@@ -121,6 +121,8 @@ export default function Calendar() {
       if (event.id === eventId.toString()) {
         const updatedTimeSlots = event.timeSlots.map((slot, index) => {
           if (index === slotIndex) {
+            // FullCalendar 的时间是一个 [start, end) 的描述
+            // console.log(info.event.start, info.event.end)
             return {
               ...slot,
               start: info.event.start!,
@@ -237,6 +239,10 @@ export default function Calendar() {
         selectedDate={dialogState.initialDate}
         selectedEvent={dialogState.event}
       />
+
+      <pre>
+        {JSON.stringify(events, null, 2)}
+      </pre>
     </>
   )
 }
