@@ -1,5 +1,7 @@
 # Precise Calendar
 
+![image](./docs/image2.png)
+
 一个基于 React 和 FullCalendar 的现代化日历应用，专注于精确的时间管理和任务追踪。特别适合需要记录断断续续工作时间的场景，让时间管理更加真实和可控。
 
 - TypeScript
