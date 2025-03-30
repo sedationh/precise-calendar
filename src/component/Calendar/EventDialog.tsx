@@ -41,12 +41,13 @@ interface CustomEventSourceInput {
   timeSlots: TimeSlot[]
   allDay: boolean
   description?: string
+  color?: string
 }
 
 interface EventDialogProps {
   isOpen: boolean
   onClose: () => void
-  onSave: (eventData: { title: string, timeSlots: TimeSlot[], allDay: boolean, description?: string }) => void
+  onSave: (eventData: { title: string, timeSlots: TimeSlot[], allDay: boolean, description?: string, color?: string }) => void
   onDelete: () => void
   selectedDate: Date
   selectedEvent: CustomEventSourceInput | null
@@ -60,9 +61,20 @@ const formSchema = z.object({
     end: z.date().optional(),
   })),
   description: z.string().optional(),
+  color: z.string().optional(),
 })
 
 type FormValues = z.infer<typeof formSchema>
+
+// 预定义的颜色选项
+const colorOptions = [
+  { label: '蓝色', value: '#3788d8' },
+  { label: '红色', value: '#dc3545' },
+  { label: '绿色', value: '#28a745' },
+  { label: '紫色', value: '#6f42c1' },
+  { label: '黄色', value: '#ffc107' },
+  { label: '玫红色', value: '#e83e8c' },
+]
 
 const EventDialog: React.FC<EventDialogProps> = ({
   isOpen,
@@ -79,6 +91,7 @@ const EventDialog: React.FC<EventDialogProps> = ({
       title: 'Happy',
       timeSlots: [{ start: selectedDate, end: selectedDate }],
       description: '',
+      color: '#3788d8',
     },
   })
 
@@ -90,6 +103,7 @@ const EventDialog: React.FC<EventDialogProps> = ({
           title: selectedEvent.title,
           timeSlots: selectedEvent.timeSlots,
           description: selectedEvent.description || '',
+          color: selectedEvent.color || '#3788d8',
         })
       }
       else {
@@ -97,6 +111,7 @@ const EventDialog: React.FC<EventDialogProps> = ({
           title: 'Happy',
           timeSlots: [{ start: selectedDate, end: selectedDate }],
           description: '',
+          color: '#3788d8',
         })
       }
     }
@@ -121,6 +136,7 @@ const EventDialog: React.FC<EventDialogProps> = ({
       })),
       allDay: true,
       description: data.description,
+      color: data.color,
     })
   }
 
@@ -277,6 +293,32 @@ const EventDialog: React.FC<EventDialogProps> = ({
                         {...field}
                       />
                     </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="color"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <span className="h-5 w-5 text-muted-foreground">🎨</span>
+                      颜色
+                    </FormLabel>
+                    <div className="flex gap-2">
+                      {colorOptions.map(color => (
+                        <div
+                          key={color.value}
+                          onClick={() => field.onChange(color.value)}
+                          className={`w-6 h-6 rounded-full cursor-pointer ${
+                            field.value === color.value ? 'ring-2 ring-offset-2 ring-black' : ''
+                          }`}
+                          style={{ backgroundColor: color.value }}
+                          title={color.label}
+                        />
+                      ))}
+                    </div>
                   </FormItem>
                 )}
               />

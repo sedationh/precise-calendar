@@ -20,6 +20,7 @@ interface CustomEventSourceInput {
   title: string
   timeSlots: TimeSlot[]
   allDay: boolean
+  color?: string
 }
 
 interface DialogState {
@@ -42,6 +43,7 @@ export default function Calendar() {
           title: '示例事件1',
           timeSlots: [{ start: new Date(), end: new Date() }],
           allDay: true,
+          color: '#3788d8',
         },
         {
           id: '2',
@@ -57,6 +59,7 @@ export default function Calendar() {
             },
           ],
           allDay: true,
+          color: '#28a745',
         },
       ],
       serializer: value => JSON.stringify(value, (_, v) =>
@@ -140,6 +143,8 @@ export default function Calendar() {
     title: string
     timeSlots: TimeSlot[]
     allDay: boolean
+    description?: string
+    color?: string
   }) => {
     if (dialogState.mode === 'edit' && dialogState.event) {
       // 更新现有事件
@@ -213,6 +218,8 @@ export default function Calendar() {
             start: slot.start,
             end: slot.end,
             allDay: event.allDay,
+            backgroundColor: event.color,
+            borderColor: event.color,
           })),
         )}
         eventDrop={handleEventDrop}
