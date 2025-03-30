@@ -6,6 +6,7 @@ import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import FullCalendar from '@fullcalendar/react'
 import { useLocalStorageState } from 'ahooks'
+import { addDays, startOfDay } from 'date-fns'
 import { useRef, useState } from 'react'
 import EventDialog from './EventDialog'
 import 'bootstrap/dist/css/bootstrap.css'
@@ -43,26 +44,55 @@ export default function Calendar() {
       defaultValue: [
         {
           id: '1',
-          title: 'Sample Event 1',
-          timeSlots: [{ start: new Date(), end: new Date() }],
+          title: 'Conference',
+          timeSlots: [
+            {
+              start: startOfDay(new Date()),
+              end: startOfDay(addDays(new Date(), 1)),
+            },
+            {
+              start: startOfDay(addDays(new Date(), 2)),
+              end: startOfDay(addDays(new Date(), 3)),
+            },
+          ],
           allDay: true,
           color: '#3788d8',
         },
         {
           id: '2',
-          title: 'Sample Multi-day Event',
+          title: 'Project Phase',
           timeSlots: [
             {
-              start: new Date(),
-              end: new Date(Date.now() + 2 * 86400000),
+              start: startOfDay(new Date()),
+              end: startOfDay(addDays(new Date(), 2)),
             },
             {
-              start: new Date(Date.now() + 5 * 86400000),
-              end: new Date(Date.now() + 7 * 86400000),
+              start: startOfDay(addDays(new Date(), 5)),
+              end: startOfDay(addDays(new Date(), 7)),
             },
           ],
           allDay: true,
           color: '#28a745',
+        },
+        {
+          id: '3',
+          title: 'Training Sessions',
+          timeSlots: [
+            {
+              start: startOfDay(addDays(new Date(), 1)),
+              end: startOfDay(addDays(new Date(), 2)),
+            },
+            {
+              start: startOfDay(addDays(new Date(), 4)),
+              end: startOfDay(addDays(new Date(), 5)),
+            },
+            {
+              start: startOfDay(addDays(new Date(), 8)),
+              end: startOfDay(addDays(new Date(), 9)),
+            },
+          ],
+          allDay: true,
+          color: '#ffc107',
         },
       ],
       serializer: value => JSON.stringify(value, (_, v) =>
