@@ -77,6 +77,12 @@ const colorOptions = [
   { label: 'Pink', value: '#e83e8c' },
 ]
 
+// 生成随机颜色的函数
+function generateRandomColor() {
+  const colors = colorOptions.map(option => option.value)
+  return colors[Math.floor(Math.random() * colors.length)]
+}
+
 const EventDialog: React.FC<EventDialogProps> = ({
   isOpen,
   onClose,
@@ -92,7 +98,7 @@ const EventDialog: React.FC<EventDialogProps> = ({
       title: '',
       timeSlots: [{ start: selectedDate, end: selectedDate }],
       description: '',
-      color: '#3788d8',
+      color: generateRandomColor(),
     },
   })
 
@@ -120,7 +126,7 @@ const EventDialog: React.FC<EventDialogProps> = ({
             end: addDays(selectedDate, 1),
           }],
           description: '',
-          color: '#3788d8',
+          color: generateRandomColor(),
         })
       }
     }
