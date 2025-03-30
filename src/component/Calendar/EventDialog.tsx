@@ -89,7 +89,7 @@ const EventDialog: React.FC<EventDialogProps> = ({
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      title: 'Happy',
+      title: '',
       timeSlots: [{ start: selectedDate, end: selectedDate }],
       description: '',
       color: '#3788d8',
@@ -100,16 +100,21 @@ const EventDialog: React.FC<EventDialogProps> = ({
   useEffect(() => {
     if (isOpen) {
       if (selectedEvent) {
+        // 确保时间段按开始时间排序
+        const sortedTimeSlots = [...selectedEvent.timeSlots].sort((a, b) => 
+          a.start.getTime() - b.start.getTime()
+        )
+        
         form.reset({
           title: selectedEvent.title,
-          timeSlots: selectedEvent.timeSlots,
+          timeSlots: sortedTimeSlots,
           description: selectedEvent.description || '',
           color: selectedEvent.color || '#3788d8',
         })
       }
       else {
         form.reset({
-          title: 'Happy',
+          title: '',
           timeSlots: [{ start: selectedDate, end: selectedDate }],
           description: '',
           color: '#3788d8',
@@ -141,22 +146,32 @@ const EventDialog: React.FC<EventDialogProps> = ({
     })
   }
 
-  // 添加新的时间段
-  const addTimeSlot = () => {
-    const currentTimeSlots = form.getValues('timeSlots')
-    form.setValue('timeSlots', [
-      ...currentTimeSlots,
-      { start: selectedDate, end: selectedDate },
-    ])
-  }
-
   // 删除时间段
   const removeTimeSlot = (index: number) => {
     const currentTimeSlots = form.getValues('timeSlots')
-    form.setValue(
-      'timeSlots',
-      currentTimeSlots.filter((_, i) => i !== index),
-    )
+    const newTimeSlots = currentTimeSlots.filter((_, i) => i !== index)
+    
+    if (newTimeSlots.length === 0) {
+      // 如果删除后没有时间段了，删除整个任务
+      onDelete()
+      return
+    }
+    
+    // 按开始时间排序
+    newTimeSlots.sort((a, b) => a.start.getTime() - b.start.getTime())
+    form.setValue('timeSlots', newTimeSlots)
+  }
+
+  // 添加新的时间段
+  const addTimeSlot = () => {
+    const currentTimeSlots = form.getValues('timeSlots')
+    const newTimeSlots = [
+      ...currentTimeSlots,
+      { start: selectedDate, end: selectedDate },
+    ]
+    // 按开始时间排序
+    newTimeSlots.sort((a, b) => a.start.getTime() - b.start.getTime())
+    form.setValue('timeSlots', newTimeSlots)
   }
 
   return (
@@ -259,16 +274,14 @@ const EventDialog: React.FC<EventDialogProps> = ({
                         )}
                       />
                     </div>
-                    {index > 0 && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeTimeSlot(index)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeTimeSlot(index)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 ))}
                 <Button
