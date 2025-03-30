@@ -3,6 +3,7 @@ import { Calendar } from '@/components/ui/calendar'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -167,6 +168,9 @@ const EventDialog: React.FC<EventDialogProps> = ({
               <DialogTitle>
                 {selectedEvent ? '编辑日程' : '新建日程'}
               </DialogTitle>
+              <DialogDescription>
+                {selectedEvent ? '修改日程的详细信息' : '创建一个新的日程'}
+              </DialogDescription>
               <FormField
                 control={form.control}
                 name="title"
