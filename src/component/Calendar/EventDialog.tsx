@@ -56,7 +56,7 @@ interface EventDialogProps {
 
 // 创建表单验证模式
 const formSchema = z.object({
-  title: z.string().min(1, { message: '标题不能为空' }),
+  title: z.string().min(1, { message: 'Title cannot be empty' }),
   timeSlots: z.array(z.object({
     start: z.date(),
     end: z.date().optional(),
@@ -69,12 +69,12 @@ type FormValues = z.infer<typeof formSchema>
 
 // 预定义的颜色选项
 const colorOptions = [
-  { label: '蓝色', value: '#3788d8' },
-  { label: '红色', value: '#dc3545' },
-  { label: '绿色', value: '#28a745' },
-  { label: '紫色', value: '#6f42c1' },
-  { label: '黄色', value: '#ffc107' },
-  { label: '玫红色', value: '#e83e8c' },
+  { label: 'Blue', value: '#3788d8' },
+  { label: 'Red', value: '#dc3545' },
+  { label: 'Green', value: '#28a745' },
+  { label: 'Purple', value: '#6f42c1' },
+  { label: 'Yellow', value: '#ffc107' },
+  { label: 'Pink', value: '#e83e8c' },
 ]
 
 const EventDialog: React.FC<EventDialogProps> = ({
@@ -176,10 +176,10 @@ const EventDialog: React.FC<EventDialogProps> = ({
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <DialogHeader>
               <DialogTitle>
-                {selectedEvent ? '编辑日程' : '新建日程'}
+                {selectedEvent ? 'Edit Event' : 'New Event'}
               </DialogTitle>
               <DialogDescription>
-                {selectedEvent ? '修改日程的详细信息' : '创建一个新的日程'}
+                {selectedEvent ? 'Modify event details' : 'Create a new event'}
               </DialogDescription>
               <FormField
                 control={form.control}
@@ -189,7 +189,7 @@ const EventDialog: React.FC<EventDialogProps> = ({
                     <FormControl>
                       <Input
                         {...field}
-                        placeholder="添加日程标题"
+                        placeholder="Add event title"
                         className="text-lg font-medium border-none focus-visible:ring-0 focus-visible:ring-offset-0"
                       />
                     </FormControl>
@@ -202,7 +202,7 @@ const EventDialog: React.FC<EventDialogProps> = ({
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <CalendarIcon className="h-5 w-5 text-muted-foreground" />
-                  <span className="text-sm font-medium">时间段</span>
+                  <span className="text-sm font-medium">Time Slots</span>
                 </div>
                 {form.watch('timeSlots').map((_, index) => (
                   <div key={index} className="flex items-center gap-2">
@@ -221,7 +221,7 @@ const EventDialog: React.FC<EventDialogProps> = ({
                                   >
                                     {field.value
                                       ? format(field.value, 'yyyy-MM-dd')
-                                      : <span>选择开始日期</span>}
+                                      : <span>Select start date</span>}
                                   </Button>
                                 </FormControl>
                               </PopoverTrigger>
@@ -255,7 +255,7 @@ const EventDialog: React.FC<EventDialogProps> = ({
                                   >
                                     {field.value
                                       ? format(subDays(field.value, 1), 'yyyy-MM-dd')
-                                      : <span>选择结束日期</span>}
+                                      : <span>Select end date</span>}
                                   </Button>
                                 </FormControl>
                               </PopoverTrigger>
@@ -292,7 +292,7 @@ const EventDialog: React.FC<EventDialogProps> = ({
                   className="w-full"
                   onClick={addTimeSlot}
                 >
-                  添加时间段
+                  Add Time Slot
                 </Button>
               </div>
 
@@ -303,11 +303,11 @@ const EventDialog: React.FC<EventDialogProps> = ({
                   <FormItem>
                     <FormLabel className="flex items-center gap-2">
                       <span className="h-5 w-5 text-muted-foreground">📝</span>
-                      描述
+                      Description
                     </FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="添加说明"
+                        placeholder="Add description"
                         className="resize-none"
                         {...field}
                       />
@@ -323,7 +323,7 @@ const EventDialog: React.FC<EventDialogProps> = ({
                   <FormItem>
                     <FormLabel className="flex items-center gap-2">
                       <span className="h-5 w-5 text-muted-foreground">🎨</span>
-                      颜色
+                      Color
                     </FormLabel>
                     <div className="flex gap-2">
                       {colorOptions.map(color => (
@@ -350,14 +350,14 @@ const EventDialog: React.FC<EventDialogProps> = ({
                   variant="destructive"
                   onClick={onDelete}
                 >
-                  删除
+                  Delete
                 </Button>
               )}
               <div className="flex gap-2">
                 <Button type="button" variant="outline" onClick={onClose}>
-                  取消
+                  Cancel
                 </Button>
-                <Button type="submit">保存</Button>
+                <Button type="submit">Save</Button>
               </div>
             </DialogFooter>
           </form>

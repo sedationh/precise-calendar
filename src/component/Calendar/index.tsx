@@ -5,7 +5,7 @@ import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import FullCalendar from '@fullcalendar/react'
 import { useLocalStorageState } from 'ahooks'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import EventDialog from './EventDialog'
 import 'bootstrap/dist/css/bootstrap.css'
 import 'bootstrap-icons/font/bootstrap-icons.css'
@@ -31,6 +31,8 @@ interface DialogState {
 }
 
 export default function Calendar() {
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
   // 使用 useLocalStorageState 替代 useState
   // 注意：localStorage 存储的是字符串，所以需要转换日期
   // TODO 这里 useLocalStorageState 不应该返回 undefined 类型
@@ -40,14 +42,14 @@ export default function Calendar() {
       defaultValue: [
         {
           id: '1',
-          title: '示例事件1',
+          title: 'Sample Event 1',
           timeSlots: [{ start: new Date(), end: new Date() }],
           allDay: true,
           color: '#3788d8',
         },
         {
           id: '2',
-          title: '示例多天事件',
+          title: 'Sample Multi-day Event',
           timeSlots: [
             {
               start: new Date(),
@@ -202,8 +204,78 @@ export default function Calendar() {
     }
   }
 
+  const handleExportEvents = () => {
+    if (!events) return
+    
+    const jsonString = JSON.stringify(events, null, 2)
+    const blob = new Blob([jsonString], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'calendar-events.json'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  const handleImportEvents = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string
+        const parsedEvents = JSON.parse(content)
+        
+        if (!Array.isArray(parsedEvents)) {
+          throw new Error('Imported data must be an array of events')
+        }
+
+        const processedEvents = parsedEvents.map(event => ({
+          ...event,
+          timeSlots: event.timeSlots.map((slot: TimeSlot) => ({
+            start: new Date(slot.start),
+            end: slot.end ? new Date(slot.end) : undefined,
+          })),
+          allDay: event.allDay !== undefined ? event.allDay : true,
+        }))
+
+        setEvents(processedEvents)
+        alert('Events imported successfully!')
+      } catch (error) {
+        console.error('Import failed:', error)
+        alert('Import failed: Please ensure the file format is correct')
+      }
+    }
+    reader.readAsText(file)
+  }
+
   return (
     <>
+      <div className="mb-4 flex gap-2 flex-row-reverse">
+        <button
+          className="btn btn-primary"
+          onClick={handleExportEvents}
+        >
+          Export Events
+        </button>
+        <button
+          className="btn btn-secondary"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          Import Events
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json"
+          onChange={handleImportEvents}
+          className="hidden"
+        />
+      </div>
+
       <FullCalendar
         plugins={[dayGridPlugin, bootstrap5Plugin, interactionPlugin]}
         buttonText={{
