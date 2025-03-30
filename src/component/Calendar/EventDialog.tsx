@@ -229,7 +229,10 @@ const EventDialog: React.FC<EventDialogProps> = ({
                                 <Calendar
                                   mode="single"
                                   selected={field.value}
-                                  onSelect={field.onChange}
+                                  onSelect={(date) => {
+                                    field.onChange(date)
+                                    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+                                  }}
                                   initialFocus
                                 />
                               </PopoverContent>
@@ -260,8 +263,12 @@ const EventDialog: React.FC<EventDialogProps> = ({
                                 <Calendar
                                   mode="single"
                                   selected={field.value ? subDays(field.value, 1) : undefined}
-                                  onSelect={(date) => field.onChange(date ? addDays(date, 1) : undefined)}
+                                  onSelect={(date) => {
+                                    field.onChange(date ? addDays(date, 1) : undefined)
+                                    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+                                  }}
                                   initialFocus
+                                  weekStartsOn={1}
                                 />
                               </PopoverContent>
                             </Popover>
