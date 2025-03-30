@@ -159,9 +159,16 @@ const EventDialog: React.FC<EventDialogProps> = ({
   // 添加新的时间段
   const addTimeSlot = () => {
     const currentTimeSlots = form.getValues('timeSlots')
+    // 找出当前所有时间段中最晚的结束时间
+    const latestEndDate = currentTimeSlots.reduce((latest, slot) => {
+      if (!slot.end)
+        return latest
+      return slot.end > latest ? slot.end : latest
+    }, currentTimeSlots[0]?.end || selectedDate)
+
     const newTimeSlots = [
       ...currentTimeSlots,
-      { start: selectedDate, end: selectedDate },
+      { start: latestEndDate, end: addDays(latestEndDate, 1) },
     ]
     // 按开始时间排序
     newTimeSlots.sort((a, b) => a.start.getTime() - b.start.getTime())
