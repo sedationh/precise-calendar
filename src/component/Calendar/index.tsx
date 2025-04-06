@@ -12,6 +12,7 @@ import { useEffect, useRef, useState } from 'react'
 import EventDialog from './EventDialog'
 import 'bootstrap/dist/css/bootstrap.css'
 import 'bootstrap-icons/font/bootstrap-icons.css'
+import './fullcalendar-custom.css'
 
 interface TimeSlot {
   start: Date

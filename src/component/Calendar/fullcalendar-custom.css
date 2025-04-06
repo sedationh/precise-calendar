@@ -1,0 +1,12 @@
+/* Custom FullCalendar Styles */
+
+/* Enable text wrapping for event content */
+.fc-event-title {
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.3;
+}
+
+.fc-event-main {
+  padding: 4px;
+}
